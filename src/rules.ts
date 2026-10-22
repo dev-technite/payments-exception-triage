@@ -1,8 +1,7 @@
-import type { PaymentException, TriageAction } from "./models";
+import type { TriageAction } from "./types/models";
+import type { TriageInput } from "./types/rules.types";
 
 const HIGH_VALUE_THRESHOLD_CENTS = 1_000_000;
-
-export type TriageInput = Pick<PaymentException, "reasonCode" | "amountCents">;
 
 export function triage({ reasonCode, amountCents }: TriageInput): TriageAction {
   switch (reasonCode) {

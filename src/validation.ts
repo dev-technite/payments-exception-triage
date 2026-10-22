@@ -1,14 +1,8 @@
 import { z } from "zod";
-import { DIRECTIONS, type PaymentException } from "./models";
+import type { Direction } from "./types/models";
+import type { ValidationError, ValidationResult } from "./types/validation.types";
 
-export interface ValidationError {
-  field: string;
-  message: string;
-}
-
-export type ValidationResult =
-  | { ok: true; value: PaymentException }
-  | { ok: false; errors: ValidationError[] };
+const DIRECTIONS = ["INBOUND", "OUTBOUND"] as const satisfies readonly Direction[];
 
 const BSB_PATTERN = /^\d{3}-\d{3}$/;
 const ACCOUNT_NUMBER_PATTERN = /^\d{6,12}$/;

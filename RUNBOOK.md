@@ -32,39 +32,68 @@ Enforce these in **every** prompt. If the agent violates them, paste a steering 
 |-----------|-------------------|
 | **TDD** | Red → green → refactor. Failing test first; minimal code to pass; then tidy. |
 | **Clean code** | Names say what the code decides. Small functions. No dead code. No clever one-liners. |
-| **Single responsibility** | One reason to change per file: validate, decide, orchestrate, persist, log, or adapt HTTP. Never mix two of those in one module. |
-| **Modular** | Flat files, narrow exports. `validation` and `rules` stay pure. `app.ts` only maps HTTP to the service. |
+| **Single responsibility** | One reason to change per file: validate, decide, orchestrate, persist, log, or adapt HTTP. Never mix two of those in one module. Types and interfaces are their own concern: they live in `src/types/<module>.types.ts`, not in the file that implements the behaviour. |
+| **Modular** | Flat behaviour files in `src/`, plus one `src/types/` folder for types only. Narrow exports. `validation` and `rules` stay pure. `app.ts` only maps HTTP to the service. |
 | **Light domain language** | Use clear names (`TriageAction`, `ReasonCode`, `ExceptionCase`). Keep rules and validation **out of** Fastify handlers. Do **not** build hexagonal/DDD folder layers — too heavy for 2.5 hours. |
 
 ### Coding guideline (every slice)
 
 - A file changes for one reason. If a change would touch validation and HTTP, it belongs in two files.
 - A function name should tell you the decision it makes (`triage`, `validatePaymentException`, `maskBsb`).
+- Keep types separate from behaviour, and keep them out of the way. Every exported interface or type lives in the single folder `src/types/`. A module `src/<name>.ts` has its own types in `src/types/<name>.types.ts` (for example `src/types/store.types.ts` holds `CaseStore`). Create a `.types.ts` file in the slice that needs it, not as an empty stub, and only when the module exports a type. Implementation files import types with `import type` from `./types/<name>.types` and export functions only. Files inside `src/types/` import each other as siblings (`./models`). Do not add any other subfolder under `src/`, and do not add a barrel `index.ts`.
+- Runtime values never go in `src/types/`. An allowed-values list such as `["INBOUND", "OUTBOUND"]` is a private constant in the module that uses it, typed with `satisfies readonly Direction[]`; the `Direction` type itself lives in `src/types/models.ts`.
+- Group each implementation file by visibility, in this order, with one blank line between groups (skip a group that is empty): imports → private constants → private module-level values (such as a Zod schema) → public API (every `export`, kept together) → private helpers (non-exported functions, below the public API that uses them). Nothing exported appears among the private groups, and nothing private appears among the exports. Group by order and blank lines only: do not add marker comments, section banners, or comments that restate the code, so a reviewer sees the practice from the structure alone.
+- Shared domain vocabulary that several modules use (`PaymentException`, `ExceptionCase`, `TriageAction`, `CaseAction`, `CaseStatus`, `Direction`) stays in `src/types/models.ts`. Do not put a type there that only one module uses.
 - Delete unused code in the same slice. Do not leave a second way to do the same thing.
 - Add a known behaviour with a test first. Do not hide a new branch inside an existing function without a failing test.
 - Import a sibling module by its file name, with no `.js` or `.ts` suffix. This needs `"module": "ESNext"` and `"moduleResolution": "Bundler"` in `tsconfig.json` (set in Prompt 0), so `tsc` and Vitest both resolve extensionless imports.
 
-### Target modular layout (flat, SRP modules)
+### Target modular layout (flat behaviour files + one types folder)
 
 ```text
 src/
-  models.ts        # types / domain vocabulary
-  validation.ts    # Zod + invariants (pure)
-  rules.ts         # triage decisions (pure)
-  service.ts       # orchestration only
-  store.ts         # case persistence
-  settlement.ts    # mock settlement client
-  logging.ts       # structured JSON logs
-  config.ts        # env/config
-  app.ts           # Fastify routes (thin adapters)
-  main.ts          # wire + listen
+  validation.ts        # Zod + invariants (pure)
+  rules.ts             # triage decisions (pure)
+  masking.ts           # mask BSB / account number (pure)
+  service.ts           # orchestration only
+  store.ts             # in-memory case persistence
+  settlement.ts        # mock settlement client
+  logging.ts           # structured JSON logs
+  config.ts            # env/config
+  app.ts               # Fastify routes (thin adapters)
+  main.ts              # wire + listen
+  types/               # types only: no functions, no constants
+    models.ts            # shared domain vocabulary
+    validation.types.ts  # ValidationError, ValidationResult
+    rules.types.ts       # TriageInput
+    service.types.ts     # TriageService, TriageServiceDependencies, SubmitResult
+    store.types.ts       # CaseStore
+    settlement.types.ts  # SettlementClient, SettlementRequest, MockSettlementOptions
+    logging.types.ts     # Logger, LogFields
+    config.types.ts      # AppConfig (only if config needs a type)
 tests/             # unit + acceptance (same folder is fine)
 sample-data/
 scripts/verify.sh
 evidence/
 ```
 
-**Rule of thumb:** `rules.ts` / `validation.ts` stay pure (no Fastify, no `fs`). `app.ts` only maps HTTP ↔ service. Prefer a few clear files over nested `domain/` / `application/` / `infrastructure/` trees.
+Reference shape for any implementation file (`src/validation.ts` is the model). Groups are separated by a blank line and carry no comments:
+
+```ts
+import { ... } from "...";
+
+const SOME_LIMIT = 10;
+
+const someSchema = ...;
+
+export function doTheThing(input: unknown): Result { ... }
+
+function smallHelper(...) { ... }
+```
+
+Read top to bottom: imports, private constants, private values, public API, private helpers.
+
+**Rule of thumb:** `rules.ts` / `validation.ts` stay pure (no Fastify, no `fs`). `app.ts` only maps HTTP ↔ service. Everything in `src/types/` is types only: no functions, no constants, no runtime code. `src/types/` is the only subfolder of `src/`. Prefer a few clear files over nested `domain/` / `application/` / `infrastructure/` trees.
 
 ---
 
@@ -112,7 +141,8 @@ Stack (fixed):
 Constraints:
 - Empty/minimal repo structure only — no business logic yet
 - Flat modular src/ placeholders (empty or stub files OK):
-    models, validation, rules, service, store, settlement, logging, config, app, main
+    validation, rules, service, store, settlement, logging, config, app, main
+- src/types/models.ts placeholder (types only) in the single src/types/ folder
 - tsconfig: strict, "module": "ESNext", "moduleResolution": "Bundler" (so
   extensionless sibling imports work for both tsc and Vitest)
 - Include: README stub, .gitignore, package.json + tsconfig + vitest config,
@@ -121,6 +151,10 @@ Constraints:
 - Synthetic AU payments domain; no credentials; no Westpac data
 - Do NOT implement validation, rules, API, or tests yet
 - Do NOT create nested DDD folders (no domain/application/infrastructure trees)
+- Convention for later slices: exported types/interfaces go in
+  src/types/<module>.types.ts (not in the implementation file);
+  src/types/models.ts holds shared domain types only. src/types/ is the only
+  subfolder of src/. Do not create any .types.ts stubs now.
 
 After you finish, list exact files created and stop.
 ```
@@ -135,7 +169,10 @@ After you finish, list exact files created and stop.
 Next slice ONLY: inbound payment exception validation.
 
 Architecture:
-- src/validation.ts (+ types in models.ts as needed)
+- src/validation.ts — behaviour only, grouped: private constants → private schema → public API → private helpers
+- src/types/validation.types.ts — ValidationError, ValidationResult
+- src/types/models.ts — shared domain types (PaymentException, Direction)
+- The allowed directions list is a private constant in validation.ts, not in src/types/
 - tests: write failing tests first, then minimal implementation (TDD)
 - SRP: this module only validates shape/invariants; no rules, no store, no Fastify
 - Clean code: clear error messages; no god objects
@@ -164,6 +201,8 @@ Next slice ONLY: deterministic triage rule engine + unit tests (TDD).
 
 Architecture:
 - Pure functions in src/rules.ts (no Fastify, no store, no I/O)
+- src/types/rules.types.ts — TriageInput; TriageAction goes in src/types/models.ts (shared)
+- File grouping per the coding guideline: private constants → public API → private helpers
 - SRP: maps reason + amount → TriageAction only
 - Clear names: AUTO_CLOSE, QUEUE_REVIEW, NEEDS_HUMAN
 
@@ -192,6 +231,12 @@ Architecture (modular / SRP):
 - src/store.ts — in-memory case store
 - src/settlement.ts — mock client with fail flag
 - src/logging.ts — structured JSON logs
+- src/masking.ts — maskBsb / maskAccountNumber (pure)
+- Types in their own files under src/types/, one per module: service.types.ts,
+  store.types.ts, settlement.types.ts, logging.types.ts. Shared ExceptionCase,
+  CaseAction and CaseStatus go in src/types/models.ts. Implementation files
+  export functions only.
+- File grouping per the coding guideline in every new file: private constants → public API → private helpers
 - Keep rules/validation untouched; service calls them
 - Service stays free of Fastify
 
@@ -220,6 +265,8 @@ Architecture:
 - src/app.ts — Fastify app factory + thin routes (HTTP ↔ service only)
 - src/main.ts — wire store, settlement, service, app, listen
 - src/config.ts — env config: PORT, and SETTLEMENT_FAIL=true to force the mock settlement to fail
+- Any exported type (for example AppConfig) goes in src/types/config.types.ts; do not put types in app.ts, main.ts or config.ts
+- File grouping per the coding guideline in every new file: private constants → public API → private helpers
 - No triage rules inline in route handlers
 - Acceptance tests against the Fastify app (inject; avoid real network if possible)
 
@@ -337,7 +384,15 @@ Do not rewrite prior modules unless a test fails. Extend, don't redesign.
 ```
 
 ```text
-Keep flat SRP modules: validation, rules, service, store, settlement, app. No nested DDD folders. Rules stay out of Fastify handlers.
+Keep flat SRP modules: validation, rules, service, store, settlement, app. No nested DDD folders; src/types/ is the only subfolder. Rules stay out of Fastify handlers.
+```
+
+```text
+Group the file by visibility, separated by blank lines and with no marker comments: imports, then private constants, then private values (such as a schema), then the public API (all exports together), then private helpers below it. No private code among the exports. Behaviour must not change; existing tests stay green.
+```
+
+```text
+Separate types from behaviour: move exported types/interfaces out of the implementation file into src/types/<module>.types.ts (shared domain types stay in src/types/models.ts; no constants or functions in src/types/). Implementation files export functions only. Behaviour must not change; existing tests stay green.
 ```
 
 ```text

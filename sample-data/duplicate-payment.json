@@ -1,0 +1,9 @@
+{
+  "reference": "PAY-2026-0002",
+  "amountCents": 31500,
+  "currency": "AUD",
+  "bsb": "062-000",
+  "accountNumber": "987654321",
+  "reasonCode": "DUPLICATE_PAYMENT",
+  "direction": "OUTBOUND"
+}

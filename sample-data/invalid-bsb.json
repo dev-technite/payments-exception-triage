@@ -1,0 +1,9 @@
+{
+  "reference": "PAY-2026-0004",
+  "amountCents": 25000,
+  "currency": "AUD",
+  "bsb": "032001",
+  "accountNumber": "123456789",
+  "reasonCode": "INSUFFICIENT_FUNDS",
+  "direction": "INBOUND"
+}

@@ -1,0 +1,8 @@
+{"reference":"BATCH-0001","amountCents":25000,"currency":"AUD","bsb":"032-001","accountNumber":"123456789","reasonCode":"INSUFFICIENT_FUNDS","direction":"INBOUND"}
+{"reference":"BATCH-0002","amountCents":480000,"currency":"AUD","bsb":"062-000","accountNumber":"22334455","reasonCode":"INSUFFICIENT_FUNDS","direction":"OUTBOUND"}
+{"reference":"BATCH-0003","amountCents":12050,"currency":"AUD","bsb":"082-100","accountNumber":"778899001","reasonCode":"INVALID_ACCOUNT","direction":"OUTBOUND"}
+{"reference":"BATCH-0004","amountCents":9900,"currency":"AUD","bsb":"012-345","accountNumber":"4455667788","reasonCode":"BANK_UNAVAILABLE","direction":"INBOUND"}
+{"reference":"BATCH-0005","amountCents":31500,"currency":"AUD","bsb":"062-000","accountNumber":"987654321","reasonCode":"DUPLICATE_PAYMENT","direction":"OUTBOUND"}
+{"reference":"BATCH-0006","amountCents":1500000,"currency":"AUD","bsb":"032-001","accountNumber":"100200300","reasonCode":"INSUFFICIENT_FUNDS","direction":"INBOUND"}
+{"reference":"BATCH-0007","amountCents":75000,"currency":"AUD","bsb":"082-100","accountNumber":"55501234","reasonCode":"REGULATORY_HOLD","direction":"INBOUND"}
+{"reference":"BATCH-0008","amountCents":31500,"currency":"AUD","bsb":"062-000","accountNumber":"987654321","reasonCode":"duplicate_payment","direction":"OUTBOUND"}

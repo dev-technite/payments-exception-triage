@@ -1,0 +1,9 @@
+{
+  "reference": "PAY-2026-0003",
+  "amountCents": 75000,
+  "currency": "AUD",
+  "bsb": "082-100",
+  "accountNumber": "55501234",
+  "reasonCode": "REGULATORY_HOLD",
+  "direction": "INBOUND"
+}
